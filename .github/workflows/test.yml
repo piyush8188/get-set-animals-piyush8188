@@ -1,8 +1,26 @@
-name: Acciojob score evaluation
-on: push
+name: Acciojob Tests
+
+on:
+  push:
+    branches: [ "main","master" ]
+
 jobs:
-  Explore-GitHub-Actions:
+  checking-question-type:
     runs-on: self-hosted
+    steps:
+    - name: Checking Question Type
+      id: checkingQuestionType
+      uses: acciojob/checking-question-type-action@v0.4
+      env:  
+        ACCIO_ASGMNT_ACTION_TOKEN: ${{ secrets.ACCIO_ASGMNT_ACTION_TOKEN }}
+        ACCIOJOB_BACKEND_URL: ${{ vars.ACCIOJOB_BACKEND_URL }}
+    outputs: 
+      questionType: ${{ steps.checkingQuestionType.outputs.questionType }}
+
+  running-accio-cypress-tests:
+    runs-on: self-hosted
+    needs: checking-question-type 
+    if: needs.checking-question-type.outputs.questionType == 'REACT' || needs.checking-question-type.outputs.questionType == 'Basic' 
     steps:
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
@@ -16,7 +34,28 @@ jobs:
           ls ${{ github.workspace }}
       - name: Acciojob Assignment Action
         id: assignmentAction
-        uses: acciojob/assignment-action@v0.0.2
+        uses: acciojob/assignment-action@v2.2
         env:
           ACCIO_ASGMNT_ACTION_TOKEN: ${{ secrets.ACCIO_ASGMNT_ACTION_TOKEN }}
+          ACCIOJOB_BACKEND_URL: ${{ vars.ACCIOJOB_BACKEND_URL }}
       - run: echo "🍏 Score - ${{ steps.assignmentAction.outputs.scoreReceived }}/${{ steps.assignmentAction.outputs.totalScore }}"
+
+  
+  running-accio-junit-tests:
+    runs-on: self-hosted
+    needs: checking-question-type 
+    if: needs.checking-question-type.outputs.questionType == 'JAVA'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: maven
+    - name: Junit Assignment Action
+      id: assignmentAction
+      uses: acciojob/junit-github-action@v1.1
+      env:
+          ACCIO_ASGMNT_ACTION_TOKEN: ${{ secrets.ACCIO_ASGMNT_ACTION_TOKEN }}
+          ACCIOJOB_BACKEND_URL: ${{ vars.ACCIOJOB_BACKEND_URL }}
